@@ -69,7 +69,7 @@ fn main() {
             println!("xtask: no CH340 serial port found.");
         }
     } else {
-        println!("Use `cargo qemu` to run, `cargo xtask --help` for help")
+        println!("Use `cargo k210` to run, `cargo xtask --help` for help")
     }
 }
 
