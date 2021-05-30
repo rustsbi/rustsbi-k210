@@ -17,6 +17,7 @@ pub fn init_peripheral() {
     rustsbi::legacy_stdio::init_legacy_stdio_embedded_hal_fuse(tx, rx);
     rustsbi::init_timer(Timer);
     rustsbi::init_reset(Reset);
+    rustsbi::init_ipi(Ipi);
 }
 
 struct Ipi;
