@@ -1,7 +1,21 @@
-use clap::{clap_app, crate_authors, crate_description, crate_version};
-
 mod detect;
 mod test;
+
+use clap::{clap_app, crate_authors, crate_description, crate_version};
+use std::{process::{self, Command}, env, path::{Path, PathBuf}};
+
+#[derive(Debug)]
+struct XtaskEnv {
+    compile_mode: CompileMode,
+}
+
+#[derive(Debug)]
+enum CompileMode {
+    Debug,
+    Release
+}
+
+const DEFAULT_TARGET: &'static str = "riscv64imac-unknown-none-elf";
 
 fn main() {
     let matches = clap_app!(xtask =>
@@ -26,7 +40,11 @@ fn main() {
             (about: "View size for project")
         )
     ).get_matches();
-    // Read: python xtask/ktool.py -a 0x80000000 -R -L 0x20000 ./target/xtask/flash_dump.bin
+    let mut xtask_env = XtaskEnv {
+        compile_mode: CompileMode::Debug,
+    };
+    println!("xtask: mode: {:?}", xtask_env.compile_mode);
+    // Read: python xtask/ktool.py -p COM11 -a 0x80000000 -R -L 0x20000 ./target/xtask/flash_dump.bin
     if let Some(_matches) = matches.subcommand_matches("k210") {
         let port = match detect::read_serial_port_choose_file() {
             Ok(string) => {
@@ -35,7 +53,13 @@ fn main() {
             },
             Err(_e) => detect_save_port_or_exit()
         };
-        println!("Run k210 on {}", port);
+        if matches.is_present("release") {
+            xtask_env.compile_mode = CompileMode::Release;
+        }
+        // println!("Run k210 on {}", port);
+        xtask_build_sbi(&xtask_env);
+        xtask_binary_sbi(&xtask_env);
+        xtask_run_k210(&xtask_env, &port);
     }else if let Some(_matches) = matches.subcommand_matches("detect") {
         let ans = detect::detect_serial_ports();
         if let Some((port_name, info)) = ans {
@@ -59,4 +83,71 @@ fn detect_save_port_or_exit() -> String {
         println!("xtask: no serial port found; program exit");
         std::process::exit(1);
     }
+}
+
+// @python ./ktool.py --port {{k210-serialport}} -b 1500000 --terminal {{fused-bin}}
+fn xtask_run_k210(xtask_env: &XtaskEnv, port: &str) {
+    let status = Command::new("python")
+        .current_dir(project_root().join("xtask"))
+        .arg("ktool.py")
+        .args(&["--port", port])
+        .args(&["--baudrate", "1500000"]) // todo: configurate baudrate
+        .arg("--terminal")
+        .arg(dist_dir(xtask_env).join("rustsbi-k210.bin"))
+        .status().unwrap();
+    if !status.success() {
+        panic!("run k210 failed")
+    }
+}
+
+fn xtask_build_sbi(xtask_env: &XtaskEnv) {
+    let cargo = env::var("CARGO").unwrap_or_else(|_| "cargo".to_string());
+    let mut command = Command::new(cargo);
+    command.current_dir(project_root().join("rustsbi-k210"));
+    command.arg("build");
+    match xtask_env.compile_mode {
+        CompileMode::Debug => {},
+        CompileMode::Release => { command.arg("--release"); },
+    }
+    command.args(&["--package", "rustsbi-k210"]);
+    command.args(&["--target", DEFAULT_TARGET]);
+    let status = command
+        .status().unwrap();
+    if !status.success() {
+        println!("cargo build failed");
+        process::exit(1);
+    }
+}
+
+fn xtask_binary_sbi(xtask_env: &XtaskEnv) {
+    let objcopy = "rust-objcopy";
+    let status = Command::new(objcopy)
+        .current_dir(dist_dir(xtask_env))
+        .arg("rustsbi-k210")
+        .arg("--binary-architecture=riscv64")
+        .arg("--strip-all")
+        .args(&["-O", "binary", "rustsbi-k210.bin"])
+        .status().unwrap();
+
+    if !status.success() {
+        println!("objcopy binary failed");
+        process::exit(1);
+    }
+}
+
+fn dist_dir(xtask_env: &XtaskEnv) -> PathBuf {
+    let mut path_buf = project_root().join("target").join(DEFAULT_TARGET);
+    path_buf = match xtask_env.compile_mode {
+        CompileMode::Debug => path_buf.join("debug"),
+        CompileMode::Release => path_buf.join("release"),
+    };
+    path_buf
+}
+
+fn project_root() -> PathBuf {
+    Path::new(&env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(1)
+        .unwrap()
+        .to_path_buf()
 }
