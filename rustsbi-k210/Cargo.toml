@@ -1,0 +1,15 @@
+[package]
+name = "rustsbi-k210"
+version = "0.0.1"
+authors = ["luojia65 <me@luojia.cc>"]
+edition = "2018"
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rustsbi = "0.2.0-alpha.3"
+riscv = { git = "https://github.com/rust-embedded/riscv", rev = "7e9d2e5b", features = ["inline-asm"] }
+linked_list_allocator = "0.9"
+k210-hal = { git = "https://github.com/riscv-rust/k210-hal" }
+r0 = "1.0"
