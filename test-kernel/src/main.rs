@@ -6,7 +6,7 @@
 
 mod sbi;
 mod console;
-// mod runtime;
+mod feature;
 
 const PER_HART_STACK_SIZE: usize = 64 * 1024; // 64KiB
 const KERNEL_STACK_SIZE: usize = 2 * PER_HART_STACK_SIZE;
@@ -27,7 +27,10 @@ extern "C" fn rust_main(hartid: usize, opaque: usize) -> ! {
         init_heap();
     }
     println!("<< Test-kernel: Hart id = {}, opaque = {:#x}", hartid, opaque);
-    loop {}
+    feature::test_base_extension();
+    // feature::test_delegate_trap();
+    println!("<< Test-kernel: SBI test SUCCESS, shutdown");
+    sbi::shutdown()
 }
 
 fn init_bss() {
@@ -52,13 +55,14 @@ fn init_heap() {
     }
 }
 
-
 use core::panic::PanicInfo;
 
 #[cfg_attr(not(test), panic_handler)]
 #[allow(unused)]
-fn panic(_info: &PanicInfo) -> ! {
-    loop {}
+fn panic(info: &PanicInfo) -> ! {
+    println!("!! Test-kernel: {}", info);
+    println!("!! Test-kernel: SBI test FAILED due to panic");
+    sbi::shutdown()
 }
 
 #[naked]
