@@ -1,28 +1,19 @@
-use crate::sbi::*;
 use core::fmt::{self, Write};
-use spin::Mutex;
+use crate::sbi::console_putchar;
 
 struct Stdout;
 
 impl Write for Stdout {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        let mut buffer = [0u8; 4];
         for c in s.chars() {
-            for code_point in c.encode_utf8(&mut buffer).as_bytes().iter() {
-                console_putchar(*code_point as usize);
-            }
+            console_putchar(c as usize);
         }
         Ok(())
     }
 }
 
-#[allow(unused)]
 pub fn print(args: fmt::Arguments) {
-    STDOUT.lock().write_fmt(args).unwrap();
-}
-
-lazy_static::lazy_static! {
-    static ref STDOUT: Mutex<Stdout> = Mutex::new(Stdout);
+    Stdout.write_fmt(args).unwrap();
 }
 
 #[macro_export]

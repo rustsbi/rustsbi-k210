@@ -87,8 +87,6 @@ unsafe fn do_transfer_illegal_instruction(ctx: &mut SupervisorContext) {
     use riscv::register::{
         scause, stval, mtval, sepc, mstatus::{self, MPP, SPP}, stvec
     };
-    rustsbi::println!("Transfer; {:#x?}", ctx);
-    rustsbi::println!("sepc = {:#x}", sepc::read());
     // 设置S层异常原因为：非法指令
     scause::set(scause::Trap::Exception(scause::Exception::IllegalInstruction));
     // 填写异常指令的指令内容
@@ -106,8 +104,6 @@ unsafe fn do_transfer_illegal_instruction(ctx: &mut SupervisorContext) {
     // 设置返回地址，返回到S层
     // 注意，无论是Direct还是Vectored模式，所有异常的向量偏移都是0，不需要处理中断向量，跳转到入口地址即可
     ctx.mepc = stvec::read().address();
-    rustsbi::println!("ctx.mepc = {:#x}", ctx.mepc);
-    rustsbi::println!("Transfer complete; {:#x?}", ctx);
 }
 
 // 真·非法指令异常，是M层出现的

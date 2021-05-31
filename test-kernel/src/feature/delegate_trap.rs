@@ -11,11 +11,9 @@ pub fn test_delegate_trap() {
 
 fn init_trap_vector() {
     let mut addr = rdtime_test_trap as usize;
-    println!("Addr = {:#x}", addr);
     if addr & 0x2 != 0 {
         addr = addr.wrapping_add(0x2); // 必须对齐到4个字节
     }
-    println!("Addr = {:#x}", addr);
     unsafe { stvec::write(addr, TrapMode::Direct) };
 }
 
