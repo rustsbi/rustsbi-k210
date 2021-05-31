@@ -3,15 +3,19 @@ use crate::{sbi, println};
 
 pub fn test_delegate_trap() {
     println!(">> Test-kernel: Trigger illegal exception");
-    // init_trap_vector();
+    let stvec_before = stvec::read().address();
+    init_trap_vector();
     unsafe { asm!("csrw mcycle, x0") }; // mcycle cannot be written, this is always a 4-byte illegal instruction
+    unsafe { stvec::write(stvec_before, TrapMode::Direct) };
 }
 
 fn init_trap_vector() {
     let mut addr = rdtime_test_trap as usize;
+    println!("Addr = {:#x}", addr);
     if addr & 0x2 != 0 {
-        addr += 0x2; // 必须对齐到4个字节
+        addr = addr.wrapping_add(0x2); // 必须对齐到4个字节
     }
+    println!("Addr = {:#x}", addr);
     unsafe { stvec::write(addr, TrapMode::Direct) };
 }
 
@@ -30,7 +34,7 @@ extern "C" fn rust_test_trap_handler() {
 #[link_section = ".text"]
 unsafe extern "C" fn rdtime_test_trap() -> ! {
     asm!(
-        ".p2align 2",
+        ".align 4", // align to 4 bytes
         "addi   sp, sp, -8*16
         sd      ra, 8*0(sp)
         sd      t0, 8*1(sp)

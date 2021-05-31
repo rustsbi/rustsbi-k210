@@ -45,17 +45,19 @@ pub fn execute_supervisor(supervisor_mepc: usize, a0: usize, a1: usize) -> ! {
 
 #[inline]
 unsafe fn get_vaddr_u32(vaddr: usize) -> u32 {
-    let mut ans: u32;
+    get_vaddr_u16(vaddr) as u32 | 
+    ((get_vaddr_u16(vaddr.wrapping_add(2)) as u32) << 16)
+}
+
+#[inline]
+unsafe fn get_vaddr_u16(vaddr: usize) -> u16 {
+    let mut ans: u16;
     asm!("
-        li      {tmp}, (1 << 17)
-        csrrs   {tmp}, mstatus, {tmp}
-        lwu     {ans}, 0({vaddr})
-        csrw    mstatus, {tmp}
-        ",
-        tmp = out(reg) _,
-        vaddr = in(reg) vaddr,
-        ans = lateout(reg) ans
-    );
+        li      {2}, (1 << 17)
+        csrrs   {2}, mstatus, {2}
+        lhu     {0}, 0({1})
+        csrw    mstatus, {2}
+    ", out(reg) ans, in(reg) vaddr, out(reg) _);
     ans
 }
 
@@ -85,6 +87,8 @@ unsafe fn do_transfer_illegal_instruction(ctx: &mut SupervisorContext) {
     use riscv::register::{
         scause, stval, mtval, sepc, mstatus::{self, MPP, SPP}, stvec
     };
+    rustsbi::println!("Transfer; {:#x?}", ctx);
+    rustsbi::println!("sepc = {:#x}", sepc::read());
     // 设置S层异常原因为：非法指令
     scause::set(scause::Trap::Exception(scause::Exception::IllegalInstruction));
     // 填写异常指令的指令内容
@@ -102,6 +106,8 @@ unsafe fn do_transfer_illegal_instruction(ctx: &mut SupervisorContext) {
     // 设置返回地址，返回到S层
     // 注意，无论是Direct还是Vectored模式，所有异常的向量偏移都是0，不需要处理中断向量，跳转到入口地址即可
     ctx.mepc = stvec::read().address();
+    rustsbi::println!("ctx.mepc = {:#x}", ctx.mepc);
+    rustsbi::println!("Transfer complete; {:#x?}", ctx);
 }
 
 // 真·非法指令异常，是M层出现的
