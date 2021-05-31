@@ -28,11 +28,17 @@ extern "C" fn rust_main(hartid: usize, opaque: usize) -> ! {
     }
     println!("<< Test-kernel: Hart id = {}, opaque = {:#x}", hartid, opaque);
     feature::test_base_extension();
-    feature::test_emulate_rdtime();
     feature::test_delegate_trap();
     feature::test_sfence_vma();
+    test_emulate_rdtime();
     println!("<< Test-kernel: SBI test SUCCESS, shutdown");
     sbi::shutdown()
+}
+
+pub fn test_emulate_rdtime() {
+    println!(">> Test-kernel: Testing SBI instruction emulation");
+    let time = riscv::register::time::read64();
+    println!("<< Test-kernel: Current time: {:x}", time);
 }
 
 fn init_bss() {
