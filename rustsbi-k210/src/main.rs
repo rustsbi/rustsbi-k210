@@ -63,9 +63,9 @@ extern "C" fn rust_main() -> ! {
     delegate_interrupt_exception();
     if hartid == 0 {
         hart_csr_utils::print_hart_csrs();
-        println!("[rustsbi] enter supervisor 0x80200000");
+        println!("[rustsbi] enter supervisor 0x80020000");
     }
-    execute::execute_supervisor(0x80200000, hartid, DEVICE_TREE_BINARY.as_ptr() as usize)
+    execute::execute_supervisor(0x80020000, hartid, DEVICE_TREE_BINARY.as_ptr() as usize)
 }
 
 fn pause_if_not_start_hart() {
@@ -156,6 +156,7 @@ unsafe extern "C" fn entry() -> ! {
     "
     la      sp, {stack}
     li      t0, {per_hart_stack_size}
+    csrr    a0, mhartid
     addi    t1, a0, 1
 1:  add     sp, sp, t0
     addi    t1, t1, -1

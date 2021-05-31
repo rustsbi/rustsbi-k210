@@ -9,28 +9,30 @@ SECTIONS
     start = .;
 
     .text : ALIGN(4K) {
-        _stext = .;
+        stext = .;
         *(.text.entry)
         *(.text .text.*)
-        _etext = .;
+        etext = .;
     }
 
     .rodata : ALIGN(4K) {
-        _srodata = .;
+        srodata = .;
         *(.rodata .rodata.*)
-        _erodata = .;
+        erodata = .;
     }
 
     .data : ALIGN(4K) {
-        _sdata = .;
+        sidata = LOADADDR(.data);
+        sdata = .;
         *(.data .data.*)
-        _edata = .;
+        edata = .;
     }
 
     .bss (NOLOAD) : ALIGN(4K)  {
-        _sbss = .;
+        *(.bss.uninit)
+        sbss = .;
         *(.sbss .bss .bss.*)
-        _ebss = .;
+        ebss = .;
     }
 
     PROVIDE(end = .);

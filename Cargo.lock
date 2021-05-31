@@ -191,6 +191,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "lock_api"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0382880606dff6d15c9476c416d18690b72742aa7b605bb6dd6ec9030fbf07eb"
+dependencies = [
+ "scopeguard",
+]
+
+[[package]]
 name = "mach"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -295,6 +304,16 @@ dependencies = [
 [[package]]
 name = "riscv"
 version = "0.6.0"
+source = "git+https://github.com/rust-embedded/riscv?rev=7e9d2e5#7e9d2e5bb05ccabf5539fcea36877748d7236c6e"
+dependencies = [
+ "bare-metal",
+ "bit_field 0.10.1",
+ "riscv-target",
+]
+
+[[package]]
+name = "riscv"
+version = "0.6.0"
 source = "git+https://github.com/rust-embedded/riscv?rev=7e9d2e5b#7e9d2e5bb05ccabf5539fcea36877748d7236c6e"
 dependencies = [
  "bare-metal",
@@ -347,6 +366,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "scopeguard"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
+
+[[package]]
 name = "semver"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -391,6 +416,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13287b4da9d1207a4f4929ac390916d64eacfe236a487e9a9f5b3be392be5162"
 
 [[package]]
+name = "spin"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b87bbf98cb81332a56c1ee8929845836f85e8ddd693157c30d76660196014478"
+dependencies = [
+ "lock_api",
+]
+
+[[package]]
 name = "strsim"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -399,6 +433,15 @@ checksum = "8ea5119cdb4c55b55d432abb513a0429384878c15dde60cc77b1c99de1a95a6a"
 [[package]]
 name = "test-kernel"
 version = "0.1.0"
+dependencies = [
+ "bit_field 0.10.1",
+ "bitflags",
+ "buddy_system_allocator",
+ "lazy_static",
+ "r0",
+ "riscv 0.6.0 (git+https://github.com/rust-embedded/riscv?rev=7e9d2e5)",
+ "spin 0.9.0",
+]
 
 [[package]]
 name = "textwrap"

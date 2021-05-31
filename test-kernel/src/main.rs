@@ -1,6 +1,57 @@
 #![feature(naked_functions, asm)]
+#![feature(generator_trait)]
+#![feature(default_alloc_error_handler)]
 #![no_std]
 #![no_main]
+
+mod sbi;
+mod console;
+// mod runtime;
+
+const PER_HART_STACK_SIZE: usize = 64 * 1024; // 64KiB
+const KERNEL_STACK_SIZE: usize = 2 * PER_HART_STACK_SIZE;
+#[link_section = ".bss.uninit"]
+static mut KERNEL_STACK: [u8; KERNEL_STACK_SIZE] = [0; KERNEL_STACK_SIZE];
+
+const KERNEL_HEAP_SIZE: usize = 128 * 1024; // 128KiB
+#[link_section = ".bss.uninit"]
+static mut HEAP_SPACE: [u8; KERNEL_HEAP_SIZE] = [0; KERNEL_HEAP_SIZE];
+#[global_allocator]
+static KERNEL_HEAP: LockedHeap<32> = LockedHeap::empty();
+
+use buddy_system_allocator::LockedHeap;
+
+extern "C" fn rust_main(hartid: usize, opaque: usize) -> ! {
+    if hartid == 0 {
+        init_bss();
+        init_heap();
+    }
+    println!("<< Test-kernel: Hart id = {}, opaque = {:#x}", hartid, opaque);
+    loop {}
+}
+
+fn init_bss() {
+    extern "C" {
+        static mut ebss: u32;
+        static mut sbss: u32;
+        static mut edata: u32;
+        static mut sdata: u32;
+        static sidata: u32;
+    }
+    unsafe {
+        r0::zero_bss(&mut sbss, &mut ebss);
+        r0::init_data(&mut sdata, &mut edata, &sidata);
+    } 
+}
+
+fn init_heap() {
+    unsafe {
+        KERNEL_HEAP.lock().init(
+            HEAP_SPACE.as_ptr() as usize, KERNEL_HEAP_SIZE
+        )
+    }
+}
+
 
 use core::panic::PanicInfo;
 
@@ -14,5 +65,21 @@ fn panic(_info: &PanicInfo) -> ! {
 #[link_section = ".text.entry"] 
 #[export_name = "_start"]
 unsafe extern "C" fn entry() -> ! {
-    asm!("1: j 1b", options(noreturn))
+    asm!(
+    // 1. set sp
+    // sp = bootstack + (hartid + 1) * HART_STACK_SIZE
+    "
+    la      sp, {stack}
+    li      t0, {per_hart_stack_size}
+    addi    t1, a0, 1
+1:  add     sp, sp, t0
+    addi    t1, t1, -1
+    bnez    t1, 1b
+    ",
+    // 2. jump to rust_main (absolute address)
+    "j      {rust_main}", 
+    per_hart_stack_size = const PER_HART_STACK_SIZE,
+    stack = sym KERNEL_STACK, 
+    rust_main = sym rust_main,
+    options(noreturn))
 }
