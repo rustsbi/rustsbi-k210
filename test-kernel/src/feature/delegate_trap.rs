@@ -3,7 +3,7 @@ use crate::{sbi, println};
 
 pub fn test_delegate_trap() {
     println!(">> Test-kernel: Trigger illegal exception");
-    init_trap_vector();
+    // init_trap_vector();
     unsafe { asm!("csrw mcycle, x0") }; // mcycle cannot be written, this is always a 4-byte illegal instruction
 }
 
@@ -23,13 +23,14 @@ extern "C" fn rust_test_trap_handler() {
         sbi::shutdown()
     }
     println!("<< Test-kernel: Illegal exception delegate success");
-    sepc::write(sepc::read().wrapping_add(4));
+    sepc::write(sepc::read().wrapping_add(4)); // skip mcycle write illegal instruction
 }
 
 #[naked]
 #[link_section = ".text"]
 unsafe extern "C" fn rdtime_test_trap() -> ! {
     asm!(
+        ".p2align 2",
         "addi   sp, sp, -8*16
         sd      ra, 8*0(sp)
         sd      t0, 8*1(sp)
