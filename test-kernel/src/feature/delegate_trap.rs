@@ -10,7 +10,7 @@ pub fn test_delegate_trap() {
 }
 
 fn init_trap_vector() {
-    let mut addr = rdtime_test_trap as usize;
+    let mut addr = delegate_test_trap as usize;
     if addr & 0x2 != 0 {
         addr = addr.wrapping_add(0x2); // 必须对齐到4个字节
     }
@@ -30,7 +30,7 @@ extern "C" fn rust_test_trap_handler() {
 
 #[naked]
 #[link_section = ".text"]
-unsafe extern "C" fn rdtime_test_trap() -> ! {
+unsafe extern "C" fn delegate_test_trap() -> ! {
     asm!(
         ".align 4", // align to 4 bytes
         "addi   sp, sp, -8*16
