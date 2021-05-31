@@ -2,7 +2,7 @@ mod detect;
 mod test;
 
 use clap::{clap_app, crate_authors, crate_description, crate_version};
-use std::{process::{self, Command}, env, path::{Path, PathBuf}};
+use std::{env, fs, io::{Seek, SeekFrom, Write}, path::{Path, PathBuf}, process::{self, Command}};
 
 #[derive(Debug)]
 struct XtaskEnv {
@@ -59,6 +59,9 @@ fn main() {
         // println!("Run k210 on {}", port);
         xtask_build_sbi(&xtask_env);
         xtask_binary_sbi(&xtask_env);
+        xtask_build_test_kernel(&xtask_env);
+        xtask_binary_test_kernel(&xtask_env);
+        xtask_fuse_binary(&xtask_env);
         xtask_run_k210(&xtask_env, &port);
     }else if let Some(_matches) = matches.subcommand_matches("detect") {
         let ans = detect::detect_serial_ports();
@@ -93,7 +96,7 @@ fn xtask_run_k210(xtask_env: &XtaskEnv, port: &str) {
         .args(&["--port", port])
         .args(&["--baudrate", "1500000"]) // todo: configurate baudrate
         .arg("--terminal")
-        .arg(dist_dir(xtask_env).join("rustsbi-k210.bin"))
+        .arg(dist_dir(xtask_env).join("k210-fused.bin"))
         .status().unwrap();
     if !status.success() {
         panic!("run k210 failed")
@@ -133,6 +136,54 @@ fn xtask_binary_sbi(xtask_env: &XtaskEnv) {
         println!("objcopy binary failed");
         process::exit(1);
     }
+}
+
+fn xtask_build_test_kernel(xtask_env: &XtaskEnv) {
+    let cargo = env::var("CARGO").unwrap_or_else(|_| "cargo".to_string());
+    let mut command = Command::new(cargo);
+    command.current_dir(project_root().join("test-kernel"));
+    command.arg("build");
+    match xtask_env.compile_mode {
+        CompileMode::Debug => {},
+        CompileMode::Release => { command.arg("--release"); },
+    }
+    command.args(&["--package", "test-kernel"]);
+    command.args(&["--target", DEFAULT_TARGET]);
+    let status = command
+        .status().unwrap();
+    if !status.success() {
+        println!("cargo build failed");
+        process::exit(1);
+    }
+}
+
+fn xtask_binary_test_kernel(xtask_env: &XtaskEnv) {
+    let objcopy = "rust-objcopy";
+    let status = Command::new(objcopy)
+        .current_dir(dist_dir(xtask_env))
+        .arg("test-kernel")
+        .arg("--binary-architecture=riscv64")
+        .arg("--strip-all")
+        .args(&["-O", "binary", "test-kernel.bin"])
+        .status().unwrap();
+
+    if !status.success() {
+        println!("objcopy binary failed");
+        process::exit(1);
+    }
+}
+
+fn xtask_fuse_binary(xtask_env: &XtaskEnv) {
+    let sbi_binary_path = dist_dir(xtask_env).join("rustsbi-k210.bin");
+    let test_kernel_binary_path = dist_dir(xtask_env).join("test-kernel.bin");
+    let output_path = dist_dir(xtask_env).join("k210-fused.bin");
+    let offset = 0x20000;
+    fs::copy(sbi_binary_path, &output_path).expect("copy sbi base");
+    let mut output = fs::OpenOptions::new().read(true).write(true).open(output_path)
+        .expect("open output file");
+    let buf = fs::read(test_kernel_binary_path).expect("read kernel binary");
+    output.seek(SeekFrom::Start(offset)).expect("seek to offset");
+    output.write(&buf).expect("write output");
 }
 
 fn dist_dir(xtask_env: &XtaskEnv) -> PathBuf {
