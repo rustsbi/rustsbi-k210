@@ -38,6 +38,15 @@ pub fn execute_supervisor(supervisor_mepc: usize, a0: usize, a1: usize) -> ! {
             GeneratorState::Yielded(MachineTrap::ExternalInterrupt()) => unsafe {
                 feature::call_supervisor_interrupt()
             },
+            GeneratorState::Yielded(MachineTrap::InstructionFault(addr)) => {
+                crate::println!("Load access fault! addr = {:#x}", addr);
+            },
+            GeneratorState::Yielded(MachineTrap::LoadFault(addr)) => {
+                crate::println!("Load access fault! addr = {:#x}", addr);
+            },
+            GeneratorState::Yielded(MachineTrap::StoreFault(addr)) => {
+                crate::println!("Store access fault! addr = {:#x}", addr);
+            },
             GeneratorState::Complete(()) => unreachable!(),
         }
     }

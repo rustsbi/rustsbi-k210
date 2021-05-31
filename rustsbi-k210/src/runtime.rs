@@ -56,6 +56,9 @@ impl Generator for Runtime {
         let trap = match mcause::read().cause() {
             Trap::Exception(Exception::SupervisorEnvCall) => MachineTrap::SbiCall(),
             Trap::Exception(Exception::IllegalInstruction) => MachineTrap::IllegalInstruction(),
+            Trap::Exception(Exception::InstructionFault) => MachineTrap::InstructionFault(mtval),
+            Trap::Exception(Exception::LoadFault) => MachineTrap::LoadFault(mtval),
+            Trap::Exception(Exception::StoreFault) => MachineTrap::StoreFault(mtval),
             Trap::Interrupt(Interrupt::MachineExternal) => MachineTrap::ExternalInterrupt(),
             e => panic!("unhandled exception: {:?}! mtval: {:#x?}, ctx: {:#x?}", e, mtval, self.context)
         };
@@ -68,6 +71,9 @@ pub enum MachineTrap {
     SbiCall(),
     IllegalInstruction(),
     ExternalInterrupt(),
+    InstructionFault(usize),
+    LoadFault(usize),
+    StoreFault(usize),
 }
 
 #[derive(Debug)]

@@ -31,6 +31,7 @@ extern "C" fn rust_main(hartid: usize, opaque: usize) -> ! {
     feature::test_delegate_trap();
     feature::test_sfence_vma();
     test_emulate_rdtime();
+    feature::test_catch_page_fault();
     println!("<< Test-kernel: SBI test SUCCESS, shutdown");
     sbi::shutdown()
 }

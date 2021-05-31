@@ -137,9 +137,9 @@ fn delegate_interrupt_exception() {
         + medeleg::set_instruction_fault();
         + medeleg::set_load_fault();
         + medeleg::set_store_fault(); */
-        medeleg::set_instruction_fault();
-        medeleg::set_load_fault();
-        medeleg::set_store_fault();
+        // medeleg::set_instruction_fault();
+        // medeleg::set_load_fault();
+        // medeleg::set_store_fault();
         // 默认不打开mie::set_mext 
         // 不打开mie::set_mtimer
         mie::set_msoft();

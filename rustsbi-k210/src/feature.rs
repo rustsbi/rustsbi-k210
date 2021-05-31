@@ -1,6 +1,7 @@
 mod emulate_rdtime;
 mod sfence_vma;
 mod supervisor_interrupt;
+mod delegate_page_fault;
 
 pub use emulate_rdtime::emulate_rdtime;
 pub use sfence_vma::emulate_sfence_vma;
