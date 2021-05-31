@@ -29,6 +29,7 @@ extern "C" fn rust_main(hartid: usize, opaque: usize) -> ! {
     println!("<< Test-kernel: Hart id = {}, opaque = {:#x}", hartid, opaque);
     feature::test_base_extension();
     feature::test_delegate_trap();
+    feature::test_sfence_vma();
     println!("<< Test-kernel: SBI test SUCCESS, shutdown");
     sbi::shutdown()
 }
