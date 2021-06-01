@@ -24,8 +24,8 @@ pub fn test_catch_page_fault() {
 }
 
 fn init_page_table() -> usize {
-    let ppn1 = unsafe { &TEST_PAGE_TABLE_1 } as *const _ as usize;
-    let ppn2 = unsafe { &TEST_PAGE_TABLE_2 } as *const _ as usize;
+    let ppn1 = (unsafe { &TEST_PAGE_TABLE_1 } as *const _ as usize) >> 12;
+    let ppn2 = (unsafe { &TEST_PAGE_TABLE_2 } as *const _ as usize) >> 12;
     unsafe { 
         TEST_PAGE_TABLE_0.entries[1] = (0x80000 << 10) | 0xf; // RWX, V
         TEST_PAGE_TABLE_0.entries[2] = (ppn1 << 10)    | 0x1; // 叶子, V
