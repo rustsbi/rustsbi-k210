@@ -56,6 +56,9 @@ pub fn is_page_fault(addr: usize) -> bool {
         if (final_pte & 0b1) == 0 { // level 0 pte is not valid
             return true;
         }
+        if (final_pte & 0b1110) == 0b0000 { // level 0 page cannot have leaves
+            return true;
+        }
         (final_pte >> 10) & 0x3F_FFFF_FFFF
     }; 
     // 到这一步都没有错误，说明查找是成功的，并非页异常

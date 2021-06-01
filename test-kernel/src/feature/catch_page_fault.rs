@@ -37,7 +37,12 @@ pub fn test_catch_page_fault() {
     //     println!(">> Test-kernel: Non existing page");
     //     assert!(is_read_page_fault(0x1_8000_0000 as *const usize));
     //     assert!(is_read_page_fault(0x0_c080_0000 as *const usize));
+    //     assert!(is_read_page_fault(0x0_c020_3000 as *const usize));
     // };
+    unsafe {    
+        println!(">> Test-kernel: Level zero page cannot have leaves");
+        assert!(is_read_page_fault(0x0_c020_1000 as *const usize));
+    };
 }
 
 fn init_page_table() -> usize {
@@ -48,20 +53,20 @@ fn init_page_table() -> usize {
         TEST_PAGE_TABLE_0.entries[3] = (ppn1 << 10)    | 0x1; // 叶子, V
         TEST_PAGE_TABLE_0.entries[4] = 0;                     // 无效
         TEST_PAGE_TABLE_0.entries[5] = (0x80200 << 10) | 0xf; // RWX, V
-        TEST_PAGE_TABLE_0.entries[6] = (0 << 10)       | 0xf; // RWX, V
+        TEST_PAGE_TABLE_0.entries[6] = (0x7ffff << 10) | 0xf; // RWX, V
         TEST_PAGE_TABLE_0.entries[7] = (0x80000 << 10) | 0x7; // RW, V
     }
     unsafe { 
         TEST_PAGE_TABLE_1.entries[1] = (ppn2 << 10)    | 0x1; // 叶子, V
         TEST_PAGE_TABLE_1.entries[2] = 0;                     // 无效
         TEST_PAGE_TABLE_1.entries[3] = (0x80201 << 10) | 0xf; // RWX, V
-        TEST_PAGE_TABLE_1.entries[4] = (0 << 10)       | 0xf; // RWX, V
+        TEST_PAGE_TABLE_1.entries[4] = (0x7ffff << 10) | 0xf; // RWX, V
         TEST_PAGE_TABLE_1.entries[5] = (0x80200 << 10) | 0x3; // R, V
     }
     unsafe { 
         TEST_PAGE_TABLE_2.entries[1] = (0x80200 << 10) | 0x1; // 叶子, V
         TEST_PAGE_TABLE_2.entries[2] = 0;                     // 无效
-        TEST_PAGE_TABLE_2.entries[3] = (0 << 10)       | 0xf; // RWX, V
+        TEST_PAGE_TABLE_2.entries[3] = (0x7ffff << 10) | 0xf; // RWX, V
         TEST_PAGE_TABLE_2.entries[4] = (0x80200 << 10) | 0x9; // X, V
     }
     let pa = unsafe { &TEST_PAGE_TABLE_0 } as *const _ as usize;
