@@ -1,4 +1,5 @@
 use crate::{sbi, println};
+use core::ptr;
 use riscv::{asm, register::{stvec::{self, TrapMode}, sepc, scause::{self, Trap, Exception}, satp::{self, Mode}}};
 
 #[repr(align(4096))]
@@ -7,25 +8,9 @@ struct PageTable {
     entries: [usize; 512],
 }
 
-static mut TEST_PAGE_TABLE: PageTable = {
-    let mut entries = [0; 512];
-    entries[2] = (0x80000 << 10) | 0xcf;   // 0x8000_0000 -> 0x8000_0000，0xcf 表示 VRWXAD 均为 1
-    // entries[3] = ...... << 10 | ....;   // 0x1_0000_0000 -> 子页表，0x1 表示V为1，RWX为0
-    PageTable { entries }
-};
-
-static mut TEST_PAGE_TABLE_2: PageTable = {
-    let mut entries = [0; 512];
-    entries[1] = (0x80200 << 10) | 0xcf;   // 0x1_0020_0000 -> 0x8020_0000，0xcf 表示 VRWXAD 均为 1
-    // entries[2] = ...... << 10 | ....;   // 0x1_0040_0000 -> 子页表，0x1 表示V为1，RWX为0
-    PageTable { entries }
-};
-
-static TEST_PAGE_TABLE_3: PageTable = {
-    let mut entries = [0; 512];
-    entries[1] = (0x80200 << 10) | 0xcf;   // 0x1_0040_1000 -> 0x8020_0000，0xcf 表示 VRWXAD 均为 1
-    PageTable { entries }
-};
+static mut TEST_PAGE_TABLE_0: PageTable = PageTable { entries: [0; 512] };
+static mut TEST_PAGE_TABLE_1: PageTable = PageTable { entries: [0; 512] };
+static mut TEST_PAGE_TABLE_2: PageTable = PageTable { entries: [0; 512] };
 
 pub fn test_catch_page_fault() {
     println!(">> Test-kernel: Testing catch page fault");
@@ -33,39 +18,60 @@ pub fn test_catch_page_fault() {
     let ppn = init_page_table();
     unsafe { satp::set(Mode::Sv39, 0, ppn) };
     unsafe { asm::sfence_vma_all() }; 
-    // let first_asm = unsafe { *(0x8020_0000 as *const usize) };
-    // let first_asm_shadow = unsafe { *(0x1_0020_0000 as *const usize) };
-    // todo
-    test_wrong_sext();
-    test_load_page_fault();
+    unsafe { test_wrong_sext() };
+    unsafe { test_invalid_entry() };
+    unsafe { test_unaligned_huge_page() };
 }
 
 fn init_page_table() -> usize {
+    let ppn1 = unsafe { &TEST_PAGE_TABLE_1 } as *const _ as usize;
     let ppn2 = unsafe { &TEST_PAGE_TABLE_2 } as *const _ as usize;
     unsafe { 
-        TEST_PAGE_TABLE.entries[3] = (ppn2 << 10) | 0x1;
+        TEST_PAGE_TABLE_0.entries[1] = (0x80000 << 10) | 0xf; // RWX, V
+        TEST_PAGE_TABLE_0.entries[2] = (ppn1 << 10)    | 0x1; // 叶子, V
+        TEST_PAGE_TABLE_0.entries[3] = 0;                     // 无效
+        TEST_PAGE_TABLE_0.entries[4] = (0x80200 << 10) | 0xf; // RWX, V
+        TEST_PAGE_TABLE_0.entries[5] = (0 << 10)       | 0xf; // RWX, V
+        TEST_PAGE_TABLE_0.entries[6] = (0x80200 << 10) | 0x7; // RW, V
     }
-    let ppn3 = &TEST_PAGE_TABLE_3 as *const _ as usize;
     unsafe { 
-        TEST_PAGE_TABLE_2.entries[2] = (ppn3 << 10) | 0x1;
+        TEST_PAGE_TABLE_1.entries[1] = (ppn2 << 10)    | 0x1; // 叶子, V
+        TEST_PAGE_TABLE_1.entries[2] = 0;                     // 无效
+        TEST_PAGE_TABLE_1.entries[3] = (0x80201 << 10) | 0xf; // RWX, V
+        TEST_PAGE_TABLE_1.entries[4] = (0 << 10)       | 0xf; // RWX, V
+        TEST_PAGE_TABLE_1.entries[5] = (0x80200 << 10) | 0x3; // R, V
     }
-    let pa = unsafe { &TEST_PAGE_TABLE } as *const _ as usize;
+    unsafe { 
+        TEST_PAGE_TABLE_2.entries[1] = (0x80200 << 10) | 0x1; // 叶子, V
+        TEST_PAGE_TABLE_2.entries[2] = 0;                     // 无效
+        TEST_PAGE_TABLE_2.entries[3] = (0 << 10)       | 0xf; // RWX, V
+        TEST_PAGE_TABLE_2.entries[4] = (0x80200 << 10) | 0x9; // X, V
+    }
+    let pa = unsafe { &TEST_PAGE_TABLE_0 } as *const _ as usize;
     let ppn = pa >> 12;
     ppn
 }
 
-fn test_wrong_sext() {
+#[inline]
+unsafe fn test_wrong_sext() {
     println!(">> Test-kernel: Wrong sign extension");
-    let _ = unsafe { 
-        core::ptr::read_volatile(0xfeff_ff80_0000_0000 as *const usize)
-    };
+    ptr::read_volatile(0xfeff_ff80_0000_0000 as *const usize);
+    ptr::read_volatile(0x0100_0000_0000_0000 as *const usize);
 }
 
-fn test_load_page_fault() {
-    println!(">> Test-kernel: Load page table entry not exist");
-    let _ = unsafe { 
-        core::ptr::read_volatile(0x1_0040_0200 as *const usize)
-    };
+#[inline]
+unsafe fn test_invalid_entry() {
+    println!(">> Test-kernel: Read from invalid entry");
+    ptr::read_volatile(0x1_0000_0000 as *const usize);
+    ptr::read_volatile(0x0_c040_0000 as *const usize);
+    ptr::read_volatile(0x0_c020_2000 as *const usize);
+}
+
+#[inline]
+unsafe fn test_unaligned_huge_page() {
+    println!(">> Test-kernel: Unaligned huge page");
+    ptr::read_volatile(0x1_4000_0000 as *const usize);
+    ptr::read_volatile(0x0_c060_0000 as *const usize);
 }
 
 fn init_trap_vector() {
@@ -86,8 +92,15 @@ extern "C" fn rust_test_trap_handler() {
         );
         sbi::shutdown()
     }
+    let bad_ins_addr = sepc::read();
+    let ins_16 = unsafe { core::ptr::read_volatile(bad_ins_addr as *const u16) };
+    let bytes = if ins_16 & 0b11 != 0b11 { 
+        2
+    } else {
+        4
+    };
+    sepc::write(sepc::read().wrapping_add(bytes)); // skip current instruction
     println!("<< Test-kernel: Page fault exception delegate success");
-    // sepc::write(sepc::read().wrapping_add(4)); // skip mcycle write illegal instruction
 }
 
 #[naked]
