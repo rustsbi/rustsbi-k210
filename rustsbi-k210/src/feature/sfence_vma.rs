@@ -1,5 +1,5 @@
 use crate::runtime::SupervisorContext;
-use riscv::register::satp;
+use riscv::register::{mstatus, satp};
 
 // There is no `sfence.vma` in 1.9.1 privileged spec; however there is a `sfence.vm`.
 // For backward compability, here we emulate the first instruction using the second one.
@@ -29,6 +29,7 @@ pub fn emulate_sfence_vma(ctx: &mut SupervisorContext, ins: usize) -> bool {
         mstatus_bits &= !0x1F00_0000;
         mstatus_bits |= 9 << 24; 
         unsafe { asm!("csrw mstatus, {}", in(reg) mstatus_bits) };
+        ctx.mstatus = mstatus::read();
         // emulate with sfence.vm (declared in privileged spec v1.9)
         unsafe { asm!(".word 0x10400073") }; // sfence.vm x0
         // ::"r"(rs1_vaddr)

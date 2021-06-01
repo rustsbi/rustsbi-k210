@@ -4,68 +4,56 @@ use riscv::register::{mcause::{self, Trap, Exception}, mtvec::{self, TrapMode}, 
 // if memory fault from address `addr` is a page fault, return true
 // otherwise when not a page fault, or when paging is disabled, return false
 pub fn is_page_fault(addr: usize) -> bool {
-    rustsbi::println!("~rustsbi~ addr {:#x}", addr);
     if !is_s1p9_mstatus_sv39_mode() {
-        // return false;
+        return false;
     }
     if !check_sext_sv39(addr) {
-        rustsbi::println!("~rustsbi~ sign extension");
         return true;
     }
     let base_ppn = read_sptbr_ppn();
-    rustsbi::println!("~rustsbi~ base ppn {:#x}", base_ppn);
     let level_2_ppn = unsafe {
         let vpn2 = (addr >> 30) & 0x1FF;
-        rustsbi::println!("~rustsbi~ vpn2 {}", vpn2);
         let ptr = ((base_ppn << 12) as *const usize).add(vpn2);
         let level_2_pte = if let Ok(ans) = try_read_address(ptr) {
             ans
-        } else {
-            rustsbi::println!("~rustsbi~ level 2 ppn read failed");
+        } else { // level 2 ppn read failed
             return true;
         };
-        if (level_2_pte & 0b1) == 0 {
-            rustsbi::println!("~rustsbi~ level 2 pte is not valid");
+        if (level_2_pte & 0b1) == 0 { // level 2 pte is not valid
             return true;
         }
         if (level_2_pte & 0b1110) != 0b0000 && (level_2_pte >> 10) & 0x3FFFF != 0 { // 大页对齐出错，返回页异常
-            rustsbi::println!("~rustsbi~ level 2 huge page align not satisfied");
+            // level 2 huge page align not satisfied
             return true;
         }
         (level_2_pte >> 10) & 0x3F_FFFF_FFFF
     };
     let level_1_ppn = unsafe {
         let vpn1 = (addr >> 21) & 0x1FF;
-        rustsbi::println!("~rustsbi~ vpn1 {}", vpn1);
         let ptr = ((level_2_ppn << 12) as *const usize).add(vpn1);
         let level_1_pte = if let Ok(ans) = try_read_address(ptr) {
             ans
-        } else {
-            rustsbi::println!("~rustsbi~ level 1 ppn read failed");
+        } else { // level 1 ppn read failed
             return true;
         };
-        if (level_1_pte & 0b1) == 0 {
-            rustsbi::println!("~rustsbi~ level 1 pte is not valid");
+        if (level_1_pte & 0b1) == 0 { // level 1 pte is not valid
             return true;
         }
         if (level_1_pte & 0b1110) != 0b0000 && (level_1_pte >> 10) & 0x1FF != 0 { // 大页对齐出错，返回页异常
-            rustsbi::println!("~rustsbi~ level 1 huge page align not satisfied");
+            // level 1 huge page align not satisfied
             return true;
         }
         (level_1_pte >> 10) & 0x3F_FFFF_FFFF
     };
     let _ppn = unsafe {
         let vpn0 = (addr >> 12) & 0x1FF;
-        rustsbi::println!("~rustsbi~ vpn0 {}", vpn0);
         let ptr = ((level_1_ppn << 12) as *const usize).add(vpn0);
         let final_pte = if let Ok(ans) = try_read_address(ptr) {
             ans
-        } else {
-            rustsbi::println!("~rustsbi~ level 0 ppn read failed");
+        } else { // level 0 ppn read failed
             return true;
         };
-        if (final_pte & 0b1) == 0 {
-            rustsbi::println!("~rustsbi~ level 0 pte is not valid");
+        if (final_pte & 0b1) == 0 { // level 0 pte is not valid
             return true;
         }
         (final_pte >> 10) & 0x3F_FFFF_FFFF
@@ -80,8 +68,6 @@ fn is_s1p9_mstatus_sv39_mode() -> bool {
     let mut mstatus_bits: usize; 
     unsafe { asm!("csrr {}, mstatus", out(reg) mstatus_bits) };
     let mode = (mstatus_bits >> 24) & 0b1_1111;
-    rustsbi::println!("~rustsbi~ mstatus {:#x}", mstatus_bits);
-    rustsbi::println!("~rustsbi~ s1p9 mode {}", mode);
     mode == 9
 }
 
@@ -120,7 +106,6 @@ unsafe fn try_read_address(ptr: *const usize) -> Result<usize, LoadAccessFault> 
     } else {
         Ok(ans)
     };
-    rustsbi::println!("~rustsbi~ read {:p}, ans {:x?}", ptr, ans);
     recover_trap_vector(saved_mtvec_address);
     return ans;
 }

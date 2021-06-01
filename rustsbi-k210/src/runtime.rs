@@ -67,6 +67,7 @@ impl Generator for Runtime {
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub enum MachineTrap {
     SbiCall(),
     IllegalInstruction(),
