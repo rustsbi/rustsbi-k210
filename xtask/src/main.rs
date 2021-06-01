@@ -45,7 +45,7 @@ fn main() {
     };
     println!("xtask: mode: {:?}", xtask_env.compile_mode);
     // Read: python xtask/ktool.py -p COM11 -a 0x80000000 -R -L 0x20000 ./target/xtask/flash_dump.bin
-    if let Some(_matches) = matches.subcommand_matches("k210") {
+    if let Some(matches) = matches.subcommand_matches("k210") {
         let port = match detect::read_serial_port_choose_file() {
             Ok(string) => {
                 println!("xtask: using previously selected serial port {}.", string);
