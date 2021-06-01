@@ -1,9 +1,9 @@
 use crate::runtime::SupervisorContext;
-use riscv::register::{mie, mip};
+use riscv::register::{mie, mip, mstatus};
 
 static mut DEVINTRENTRY: usize = 0;
 
-pub unsafe fn call_supervisor_interrupt() {
+pub unsafe fn call_supervisor_interrupt(ctx: &mut SupervisorContext) {
     let mut mstatus: usize;
     asm!("csrr {}, mstatus", out(reg) mstatus);
     // set mstatus.mprv
@@ -22,6 +22,7 @@ pub unsafe fn call_supervisor_interrupt() {
     mstatus |= mpp << 11;
     mstatus -= 1 << 17;
     asm!("csrw mstatus, {}", in(reg) mstatus);
+    ctx.mstatus = mstatus::read();
 }
 
 // We use implementation specific sbi_rustsbi_k210_sext function (extension 

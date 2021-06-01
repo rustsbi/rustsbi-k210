@@ -38,7 +38,8 @@ pub fn execute_supervisor(supervisor_mepc: usize, a0: usize, a1: usize) -> ! {
                 }
             },
             GeneratorState::Yielded(MachineTrap::ExternalInterrupt()) => unsafe {
-                feature::call_supervisor_interrupt()
+                let ctx = rt.context_mut();
+                feature::call_supervisor_interrupt(ctx)
             },
             GeneratorState::Yielded(MachineTrap::InstructionFault(addr)) => {
                 crate::println!("Load access fault! addr = {:#x}", addr);
