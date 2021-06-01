@@ -29,12 +29,12 @@ pub fn test_catch_page_fault() {
         assert!(is_read_page_fault(0x0_c020_2000 as *const usize));
     };
     // unsafe { 
-    //     println!(">> Test-kernel: Unaligned huge page");
+        println!(">> Test-kernel: Unaligned huge page");
     //     assert!(is_read_page_fault(0x1_4000_0000 as *const usize));
     //     assert!(is_read_page_fault(0x0_c060_0000 as *const usize));
     // };
     // unsafe {    
-    //     println!(">> Test-kernel: Non existing page");
+        println!(">> Test-kernel: Non existing page");
     //     assert!(is_read_page_fault(0x1_8000_0000 as *const usize));
     //     assert!(is_read_page_fault(0x0_c080_0000 as *const usize));
     //     assert!(is_read_page_fault(0x0_c020_3000 as *const usize));
