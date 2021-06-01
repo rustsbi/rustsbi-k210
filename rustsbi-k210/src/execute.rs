@@ -2,6 +2,8 @@ use core::{
     pin::Pin,
     ops::{Generator, GeneratorState},
 };
+use riscv::register::scause::{Trap, Exception};
+
 use crate::runtime::{MachineTrap, Runtime, SupervisorContext};
 use crate::feature;
 
@@ -27,8 +29,8 @@ pub fn execute_supervisor(supervisor_mepc: usize, a0: usize, a1: usize) -> ! {
                 let ins = unsafe { get_vaddr_u32(ctx.mepc) } as usize;
                 if !emulate_illegal_instruction(ctx, ins) {
                     unsafe {
-                        if should_transfer_illegal_instruction(ctx) {
-                            do_transfer_illegal_instruction(ctx)
+                        if feature::should_transfer_trap(ctx) {
+                            feature::do_transfer_trap(ctx, Trap::Exception(Exception::IllegalInstruction))
                         } else {
                             fail_illegal_instruction(ctx, ins)
                         }
@@ -42,7 +44,16 @@ pub fn execute_supervisor(supervisor_mepc: usize, a0: usize, a1: usize) -> ! {
                 crate::println!("Load access fault! addr = {:#x}", addr);
             },
             GeneratorState::Yielded(MachineTrap::LoadFault(addr)) => {
-                crate::println!("Load access fault! addr = {:#x}", addr);
+                let ctx = rt.context_mut();
+                if feature::is_page_fault(addr) {
+                    unsafe {
+                        feature::do_transfer_trap(ctx, Trap::Exception(Exception::LoadPageFault))
+                    }
+                } else {
+                    unsafe {
+                        feature::do_transfer_trap(ctx, Trap::Exception(Exception::LoadFault))
+                    }
+                }
             },
             GeneratorState::Yielded(MachineTrap::StoreFault(addr)) => {
                 crate::println!("Store access fault! addr = {:#x}", addr);
@@ -85,34 +96,6 @@ fn emulate_illegal_instruction(ctx: &mut SupervisorContext, ins: usize) -> bool 
         return true;
     }
     false
-}
-
-unsafe fn should_transfer_illegal_instruction(ctx: &mut SupervisorContext) -> bool {
-    use riscv::register::mstatus::MPP;
-    ctx.mstatus.mpp() != MPP::Machine
-}
-
-unsafe fn do_transfer_illegal_instruction(ctx: &mut SupervisorContext) {
-    use riscv::register::{
-        scause, stval, mtval, sepc, mstatus::{self, MPP, SPP}, stvec
-    };
-    // 设置S层异常原因为：非法指令
-    scause::set(scause::Trap::Exception(scause::Exception::IllegalInstruction));
-    // 填写异常指令的指令内容
-    stval::write(mtval::read());
-    // 填写S层需要返回到的地址，这里的mepc会被随后的代码覆盖掉
-    sepc::write(ctx.mepc);
-    // 设置中断位
-    mstatus::set_mpp(MPP::Supervisor);
-    mstatus::set_spp(SPP::Supervisor);
-    if mstatus::read().sie() {
-        mstatus::set_spie()
-    }
-    mstatus::clear_sie();
-    ctx.mstatus = mstatus::read();
-    // 设置返回地址，返回到S层
-    // 注意，无论是Direct还是Vectored模式，所有异常的向量偏移都是0，不需要处理中断向量，跳转到入口地址即可
-    ctx.mepc = stvec::read().address();
 }
 
 // 真·非法指令异常，是M层出现的
