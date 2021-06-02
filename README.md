@@ -8,6 +8,8 @@
 
 ## 使用说明
 
+请先下载[ktool.py](https://github.com/loboris/ktool)，放置在`xtask`目录下，即文件位置为`xtask/ktool.py`。
+
 运行以下指令，来直接在目标开发板运行代码。
 
 ```
