@@ -41,8 +41,18 @@ pub fn execute_supervisor(supervisor_mepc: usize, a0: usize, a1: usize) -> ! {
                 let ctx = rt.context_mut();
                 feature::call_supervisor_interrupt(ctx)
             },
+            // todo：编写样例，验证store page fault和instruction page fault
             GeneratorState::Yielded(MachineTrap::InstructionFault(addr)) => {
-                crate::println!("Load access fault! addr = {:#x}", addr);
+                let ctx = rt.context_mut();
+                if feature::is_page_fault(addr) {
+                    unsafe {
+                        feature::do_transfer_trap(ctx, Trap::Exception(Exception::InstructionPageFault))
+                    }
+                } else {
+                    unsafe {
+                        feature::do_transfer_trap(ctx, Trap::Exception(Exception::InstructionFault))
+                    }
+                }
             },
             GeneratorState::Yielded(MachineTrap::LoadFault(addr)) => {
                 let ctx = rt.context_mut();
@@ -57,7 +67,16 @@ pub fn execute_supervisor(supervisor_mepc: usize, a0: usize, a1: usize) -> ! {
                 }
             },
             GeneratorState::Yielded(MachineTrap::StoreFault(addr)) => {
-                crate::println!("Store access fault! addr = {:#x}", addr);
+                let ctx = rt.context_mut();
+                if feature::is_page_fault(addr) {
+                    unsafe {
+                        feature::do_transfer_trap(ctx, Trap::Exception(Exception::StorePageFault))
+                    }
+                } else {
+                    unsafe {
+                        feature::do_transfer_trap(ctx, Trap::Exception(Exception::StoreFault))
+                    }
+                }
             },
             GeneratorState::Complete(()) => unreachable!(),
         }
