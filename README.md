@@ -34,3 +34,6 @@ cargo test
 ## 版权声明
 
 项目的测试框架使用了[KTool](https://github.com/loboris/ktool)。这个项目使用Apache 2.0协议开源，感谢KTool项目和它的维护者们！
+
+Reference implementaion K210 includes Kendryte K210 DTS file from Western Digital, this file is
+(C) Western Digital Corporation or its affiliates under BSD-2-Clause license.
