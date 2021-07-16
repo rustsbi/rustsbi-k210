@@ -41,6 +41,12 @@ pub fn execute_supervisor(supervisor_mepc: usize, a0: usize, a1: usize) -> ! {
                 let ctx = rt.context_mut();
                 feature::call_supervisor_interrupt(ctx)
             },
+            GeneratorState::Yielded(MachineTrap::MachineTimer()) => {
+                feature::forward_supervisor_timer()
+            },
+            GeneratorState::Yielded(MachineTrap::MachineSoft()) => {
+                feature::forward_supervisor_soft()
+            },
             // todo：编写样例，验证store page fault和instruction page fault
             GeneratorState::Yielded(MachineTrap::InstructionFault(addr)) => {
                 let ctx = rt.context_mut();

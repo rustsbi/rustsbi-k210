@@ -72,21 +72,19 @@ pub fn preprocess_supervisor_external(ctx: &mut SupervisorContext) {
     }
 }
 
-// XX: Should we do this code?
-/*
-Trap::Interrupt(Interrupt::MachineSoft) => {
+pub fn forward_supervisor_timer() {
+    // Forward to S-level timer interrupt
+    unsafe {
+        mip::set_stimer(); // set S-timer interrupt flag
+        mie::clear_mext(); // Ref: rustsbi Pull request #5
+        mie::clear_mtimer(); // mask M-timer interrupt
+    }
+}
+
+pub fn forward_supervisor_soft() {
     // Forward to S-level software interrupt
     unsafe {
         mip::set_ssoft(); // set S-soft interrupt flag
         mie::clear_msoft(); // mask M-soft interrupt
     }
 }
-Trap::Interrupt(Interrupt::MachineTimer) => {
-    // Forward to S-level timer interrupt
-    unsafe {
-        mip::set_stimer(); // set S-timer interrupt flag
-        mie::clear_mext(); // Ref: Pull request #5
-        mie::clear_mtimer(); // mask M-timer interrupt
-    }
-}
-*/

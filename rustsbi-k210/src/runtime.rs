@@ -60,6 +60,8 @@ impl Generator for Runtime {
             Trap::Exception(Exception::LoadFault) => MachineTrap::LoadFault(mtval),
             Trap::Exception(Exception::StoreFault) => MachineTrap::StoreFault(mtval),
             Trap::Interrupt(Interrupt::MachineExternal) => MachineTrap::ExternalInterrupt(),
+            Trap::Interrupt(Interrupt::MachineTimer) => MachineTrap::MachineTimer(),
+            Trap::Interrupt(Interrupt::MachineSoft) => MachineTrap::MachineSoft(),
             e => panic!("unhandled exception: {:?}! mtval: {:#x?}, ctx: {:#x?}", e, mtval, self.context)
         };
         GeneratorState::Yielded(trap)
@@ -72,6 +74,8 @@ pub enum MachineTrap {
     SbiCall(),
     IllegalInstruction(),
     ExternalInterrupt(),
+    MachineTimer(),
+    MachineSoft(),
     InstructionFault(usize),
     LoadFault(usize),
     StoreFault(usize),
