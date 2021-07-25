@@ -23,7 +23,7 @@ const SBI_STACK_SIZE: usize = 2 * PER_HART_STACK_SIZE;
 #[link_section = ".bss.uninit"]
 static mut SBI_STACK: [u8; SBI_STACK_SIZE] = [0; SBI_STACK_SIZE];
 
-const SBI_HEAP_SIZE: usize = 16 * 1024; // 16KiB
+const SBI_HEAP_SIZE: usize = 8 * 1024; // 8KiB
 #[link_section = ".bss.uninit"]
 static mut HEAP_SPACE: [u8; SBI_HEAP_SIZE] = [0; SBI_HEAP_SIZE];
 #[global_allocator]

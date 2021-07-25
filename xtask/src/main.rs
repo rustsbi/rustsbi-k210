@@ -63,7 +63,10 @@ fn main() {
         xtask_binary_test_kernel(&xtask_env);
         xtask_fuse_binary(&xtask_env);
         xtask_run_k210(&xtask_env, &port);
-    }else if let Some(_matches) = matches.subcommand_matches("detect") {
+    } else if let Some(_matches) = matches.subcommand_matches("make") {
+        xtask_build_sbi(&xtask_env);
+        xtask_binary_sbi(&xtask_env);
+    } else if let Some(_matches) = matches.subcommand_matches("detect") {
         let ans = detect::detect_serial_ports();
         if let Some((port_name, info)) = ans {
             detect::dump_port(&port_name, &info);
