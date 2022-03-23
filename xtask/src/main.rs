@@ -43,7 +43,6 @@ fn main() {
     let mut xtask_env = XtaskEnv {
         compile_mode: CompileMode::Debug,
     };
-    println!("xtask: mode: {:?}", xtask_env.compile_mode);
     // Read: python xtask/ktool.py -p COM11 -a 0x80000000 -R -L 0x20000 ./target/xtask/flash_dump.bin
     if let Some(matches) = matches.subcommand_matches("k210") {
         let port = match detect::read_serial_port_choose_file() {
@@ -56,6 +55,7 @@ fn main() {
         if matches.is_present("release") {
             xtask_env.compile_mode = CompileMode::Release;
         }
+        println!("xtask: mode: {:?}", xtask_env.compile_mode);
         // println!("Run k210 on {}", port);
         xtask_build_sbi(&xtask_env);
         xtask_binary_sbi(&xtask_env);
@@ -63,7 +63,11 @@ fn main() {
         xtask_binary_test_kernel(&xtask_env);
         xtask_fuse_binary(&xtask_env);
         xtask_run_k210(&xtask_env, &port);
-    } else if let Some(_matches) = matches.subcommand_matches("make") {
+    } else if let Some(matches) = matches.subcommand_matches("make") {
+        if matches.is_present("release") {
+            xtask_env.compile_mode = CompileMode::Release;
+        }
+        println!("xtask: mode: {:?}", xtask_env.compile_mode);
         xtask_build_sbi(&xtask_env);
         xtask_binary_sbi(&xtask_env);
     } else if let Some(_matches) = matches.subcommand_matches("detect") {
