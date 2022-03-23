@@ -1,4 +1,5 @@
 use riscv::register::{mcause::{self, Trap, Exception}, mtvec::{self, TrapMode}, mepc};
+use core::arch::asm;
 
 // This function will lookup virtual memory module and page table system
 // if memory fault from address `addr` is a page fault, return true

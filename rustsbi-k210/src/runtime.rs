@@ -4,6 +4,7 @@ use riscv::register::{
     mtvec::{self, TrapMode}, mtval,
 };
 use core::{
+    arch::asm,
     pin::Pin,
     ops::{Generator, GeneratorState},
 };

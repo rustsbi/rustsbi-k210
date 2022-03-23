@@ -1,9 +1,9 @@
 #![no_std]
 #![no_main]
 #![feature(naked_functions)]
-#![feature(asm)]
 #![feature(generator_trait)]
 #![feature(default_alloc_error_handler)]
+#![feature(asm_sym, asm_const)]
 
 mod peripheral;
 mod hart_csr_utils;
@@ -13,6 +13,7 @@ mod feature;
 
 extern crate alloc;
 
+use core::arch::asm;
 use core::panic::PanicInfo;
 use buddy_system_allocator::LockedHeap;
 
