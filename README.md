@@ -4,7 +4,7 @@
 
 ## 二进制包下载
 
-稍后放出。
+请参阅发行页面：[这里](https://github.com/rustsbi/rustsbi-k210/releases)。
 
 ## 使用说明
 
