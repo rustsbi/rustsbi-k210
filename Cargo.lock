@@ -361,7 +361,7 @@ dependencies = [
 
 [[package]]
 name = "rustsbi-k210"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "bit_field 0.10.1",
  "buddy_system_allocator",
