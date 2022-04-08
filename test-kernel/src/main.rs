@@ -1,12 +1,16 @@
-#![feature(naked_functions, asm)]
+#![feature(naked_functions)]
+#![feature(asm_sym, asm_const)]
 #![feature(generator_trait)]
 #![feature(default_alloc_error_handler)]
+#![feature(stdsimd)]
 #![no_std]
 #![no_main]
 
-mod sbi;
+use core::arch::asm;
+
 mod console;
 mod feature;
+mod sbi;
 
 const PER_HART_STACK_SIZE: usize = 64 * 1024; // 64KiB
 const KERNEL_STACK_SIZE: usize = 2 * PER_HART_STACK_SIZE;
@@ -26,7 +30,10 @@ extern "C" fn rust_main(hartid: usize, opaque: usize) -> ! {
         init_bss();
         init_heap();
     }
-    println!("<< Test-kernel: Hart id = {}, opaque = {:#x}", hartid, opaque);
+    println!(
+        "<< Test-kernel: Hart id = {}, opaque = {:#x}",
+        hartid, opaque
+    );
     feature::test_base_extension();
     feature::test_delegate_trap();
     feature::test_sfence_vma();
@@ -53,14 +60,14 @@ fn init_bss() {
     unsafe {
         r0::zero_bss(&mut sbss, &mut ebss);
         r0::init_data(&mut sdata, &mut edata, &sidata);
-    } 
+    }
 }
 
 fn init_heap() {
     unsafe {
-        KERNEL_HEAP.lock().init(
-            HEAP_SPACE.as_ptr() as usize, KERNEL_HEAP_SIZE
-        )
+        KERNEL_HEAP
+            .lock()
+            .init(HEAP_SPACE.as_ptr() as usize, KERNEL_HEAP_SIZE)
     }
 }
 
@@ -75,7 +82,7 @@ fn panic(info: &PanicInfo) -> ! {
 }
 
 #[naked]
-#[link_section = ".text.entry"] 
+#[link_section = ".text.entry"]
 #[export_name = "_start"]
 unsafe extern "C" fn entry() -> ! {
     asm!(
@@ -92,7 +99,7 @@ unsafe extern "C" fn entry() -> ! {
     // 2. jump to rust_main (absolute address)
     "j      {rust_main}", 
     per_hart_stack_size = const PER_HART_STACK_SIZE,
-    stack = sym KERNEL_STACK, 
+    stack = sym KERNEL_STACK,
     rust_main = sym rust_main,
     options(noreturn))
 }

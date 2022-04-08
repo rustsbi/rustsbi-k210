@@ -1,4 +1,5 @@
 #![allow(unused)]
+use core::arch::asm;
 
 pub const EXTENSION_BASE: usize = 0x10;
 pub const EXTENSION_TIMER: usize = 0x54494D45;
@@ -28,12 +29,14 @@ fn sbi_call(extension: usize, function: usize, arg0: usize, arg1: usize, arg2: u
     let (error, value);
     match () {
         #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
-        () => unsafe { asm!(
-            "ecall", 
-            in("a0") arg0, in("a1") arg1, in("a2") arg2,
-            in("a6") function, in("a7") extension,
-            lateout("a0") error, lateout("a1") value,
-        ) },
+        () => unsafe {
+            asm!(
+                "ecall",
+                in("a0") arg0, in("a1") arg1, in("a2") arg2,
+                in("a6") function, in("a7") extension,
+                lateout("a0") error, lateout("a1") value,
+            )
+        },
         #[cfg(not(any(target_arch = "riscv32", target_arch = "riscv64")))]
         () => {
             drop((extension, function, arg0, arg1, arg2));
@@ -60,7 +63,14 @@ pub fn get_sbi_impl_version() -> usize {
 
 #[inline]
 pub fn probe_extension(extension_id: usize) -> usize {
-    sbi_call(EXTENSION_BASE, FUNCTION_BASE_PROBE_EXTENSION, extension_id, 0, 0).value
+    sbi_call(
+        EXTENSION_BASE,
+        FUNCTION_BASE_PROBE_EXTENSION,
+        extension_id,
+        0,
+        0,
+    )
+    .value
 }
 
 #[inline]
@@ -83,12 +93,14 @@ fn sbi_call_legacy(which: usize, arg0: usize, arg1: usize, arg2: usize) -> usize
     let ret;
     match () {
         #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
-        () => unsafe { asm!(
-            "ecall", 
-            in("a0") arg0, in("a1") arg1, in("a2") arg2,
-            in("a7") which,
-            lateout("a0") ret,
-        ) },
+        () => unsafe {
+            asm!(
+                "ecall",
+                in("a0") arg0, in("a1") arg1, in("a2") arg2,
+                in("a7") which,
+                lateout("a0") ret,
+            )
+        },
         #[cfg(not(any(target_arch = "riscv32", target_arch = "riscv64")))]
         () => {
             drop((which, arg0, arg1, arg2));

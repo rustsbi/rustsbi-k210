@@ -1,5 +1,10 @@
-use riscv::register::{stvec::{self, TrapMode}, sepc, scause::{self, Trap, Exception}};
-use crate::{sbi, println};
+use crate::{println, sbi};
+use core::arch::asm;
+use riscv::register::{
+    scause::{self, Exception, Trap},
+    sepc,
+    stvec::{self, TrapMode},
+};
 
 pub fn test_delegate_trap() {
     println!(">> Test-kernel: Trigger illegal exception");

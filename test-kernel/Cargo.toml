@@ -1,14 +1,14 @@
 [package]
 name = "test-kernel"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 r0 = "1"
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
-riscv = { git = "https://github.com/rust-embedded/riscv", rev = "7e9d2e5", features = ["inline-asm"] }
+riscv = { git = "https://github.com/rust-embedded/riscv", rev = "cd31989b", features = ["inline-asm"] }
 buddy_system_allocator = "0.8"
 spin = "0.9"
 bitflags = "1.2"
