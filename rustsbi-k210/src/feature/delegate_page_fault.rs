@@ -1,5 +1,9 @@
-use riscv::register::{mcause::{self, Trap, Exception}, mtvec::{self, TrapMode}, mepc};
 use core::arch::asm;
+use riscv::register::{
+    mcause::{self, Exception, Trap},
+    mepc,
+    mtvec::{self, TrapMode},
+};
 
 // This function will lookup virtual memory module and page table system
 // if memory fault from address `addr` is a page fault, return true
@@ -17,13 +21,16 @@ pub fn is_page_fault(addr: usize) -> bool {
         let ptr = ((base_ppn << 12) as *const usize).add(vpn2);
         let level_2_pte = if let Ok(ans) = try_read_address(ptr) {
             ans
-        } else { // level 2 ppn read failed
+        } else {
+            // level 2 ppn read failed
             return true;
         };
-        if (level_2_pte & 0b1) == 0 { // level 2 pte is not valid
+        if (level_2_pte & 0b1) == 0 {
+            // level 2 pte is not valid
             return true;
         }
-        if (level_2_pte & 0b1110) != 0b0000 && (level_2_pte >> 10) & 0x3FFFF != 0 { // 大页对齐出错，返回页异常
+        if (level_2_pte & 0b1110) != 0b0000 && (level_2_pte >> 10) & 0x3FFFF != 0 {
+            // 大页对齐出错，返回页异常
             // level 2 huge page align not satisfied
             return true;
         }
@@ -34,13 +41,16 @@ pub fn is_page_fault(addr: usize) -> bool {
         let ptr = ((level_2_ppn << 12) as *const usize).add(vpn1);
         let level_1_pte = if let Ok(ans) = try_read_address(ptr) {
             ans
-        } else { // level 1 ppn read failed
+        } else {
+            // level 1 ppn read failed
             return true;
         };
-        if (level_1_pte & 0b1) == 0 { // level 1 pte is not valid
+        if (level_1_pte & 0b1) == 0 {
+            // level 1 pte is not valid
             return true;
         }
-        if (level_1_pte & 0b1110) != 0b0000 && (level_1_pte >> 10) & 0x1FF != 0 { // 大页对齐出错，返回页异常
+        if (level_1_pte & 0b1110) != 0b0000 && (level_1_pte >> 10) & 0x1FF != 0 {
+            // 大页对齐出错，返回页异常
             // level 1 huge page align not satisfied
             return true;
         }
@@ -51,17 +61,20 @@ pub fn is_page_fault(addr: usize) -> bool {
         let ptr = ((level_1_ppn << 12) as *const usize).add(vpn0);
         let final_pte = if let Ok(ans) = try_read_address(ptr) {
             ans
-        } else { // level 0 ppn read failed
+        } else {
+            // level 0 ppn read failed
             return true;
         };
-        if (final_pte & 0b1) == 0 { // level 0 pte is not valid
+        if (final_pte & 0b1) == 0 {
+            // level 0 pte is not valid
             return true;
         }
-        if (final_pte & 0b1110) == 0b0000 { // level 0 page cannot have leaves
+        if (final_pte & 0b1110) == 0b0000 {
+            // level 0 page cannot have leaves
             return true;
         }
         (final_pte >> 10) & 0x3F_FFFF_FFFF
-    }; 
+    };
     // 到这一步都没有错误，说明查找是成功的，并非页异常
     false
 }
@@ -69,7 +82,7 @@ pub fn is_page_fault(addr: usize) -> bool {
 // read Privileged Spec v1.9 defined mstatus to decide virtual memory mode
 // 9 -> Sv39
 fn is_s1p9_mstatus_sv39_mode() -> bool {
-    let mut mstatus_bits: usize; 
+    let mut mstatus_bits: usize;
     unsafe { asm!("csrr {}, mstatus", out(reg) mstatus_bits) };
     let mode = (mstatus_bits >> 24) & 0b1_1111;
     mode == 9
@@ -121,11 +134,7 @@ extern "C" fn memory_fault_catch_handler() {
     }
     let bad_ins_addr = mepc::read();
     let ins_16 = unsafe { core::ptr::read_volatile(bad_ins_addr as *const u16) };
-    let bytes = if ins_16 & 0b11 != 0b11 { 
-        2
-    } else {
-        4
-    };
+    let bytes = if ins_16 & 0b11 != 0b11 { 2 } else { 4 };
     mepc::write(mepc::read().wrapping_add(bytes)); // skip current load instruction
 }
 
@@ -140,7 +149,7 @@ fn init_trap_vector() -> usize {
 }
 
 fn recover_trap_vector(saved_mtvec_address: usize) {
-    unsafe { mtvec::write(saved_mtvec_address, TrapMode::Direct)}
+    unsafe { mtvec::write(saved_mtvec_address, TrapMode::Direct) }
 }
 
 #[naked]

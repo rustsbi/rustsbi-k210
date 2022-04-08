@@ -1,5 +1,8 @@
-use crate::{sbi, println};
-use riscv::{asm, register::satp::{self, Mode}};
+use crate::{println, sbi};
+use riscv::{
+    asm,
+    register::satp::{self, Mode},
+};
 
 #[repr(align(4096))]
 struct PageTable {
@@ -9,7 +12,7 @@ struct PageTable {
 
 static TEST_PAGE_TABLE: PageTable = {
     let mut entries = [0; 512];
-    entries[2] = (0x80000 << 10) | 0xcf;   // 0x8000_0000 -> 0x8000_0000，0xcf 表示 VRWXAD 均为 1
+    entries[2] = (0x80000 << 10) | 0xcf; // 0x8000_0000 -> 0x8000_0000，0xcf 表示 VRWXAD 均为 1
     entries[508] = (0x00000 << 10) | 0xcf; // 0xffff_ffff_0000_0000 -> 0x0000_0000，0xcf 表示 VRWXAD 均为 1
     entries[510] = (0x80000 << 10) | 0xcf; // 0xffff_ffff_8000_0000 -> 0x8000_0000，0xcf 表示 VRWXAD 均为 1
     PageTable { entries }
@@ -29,7 +32,7 @@ pub fn test_sfence_vma() {
     let mapped_variable = unsafe { *(mapped_ptr as *const usize) };
     if mapped_variable != VARIABLE {
         println!("!! Test-kernel: Multi mapping page test failed: variable value don't match");
-        sbi::shutdown() 
+        sbi::shutdown()
     }
     println!("<< Test-kernel: Multi mapping page test success");
 }

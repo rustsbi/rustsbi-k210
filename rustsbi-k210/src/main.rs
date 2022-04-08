@@ -5,17 +5,17 @@
 #![feature(default_alloc_error_handler)]
 #![feature(asm_sym, asm_const)]
 
-mod peripheral;
-mod hart_csr_utils;
-mod runtime;
 mod execute;
 mod feature;
+mod hart_csr_utils;
+mod peripheral;
+mod runtime;
 
 extern crate alloc;
 
+use buddy_system_allocator::LockedHeap;
 use core::arch::asm;
 use core::panic::PanicInfo;
-use buddy_system_allocator::LockedHeap;
 
 use rustsbi::println;
 
@@ -42,9 +42,9 @@ fn panic(info: &PanicInfo) -> ! {
     use rustsbi::Reset;
     peripheral::Reset.system_reset(
         rustsbi::reset::RESET_TYPE_SHUTDOWN,
-        rustsbi::reset::RESET_REASON_SYSTEM_FAILURE
+        rustsbi::reset::RESET_REASON_SYSTEM_FAILURE,
     );
-    loop { }
+    loop {}
 }
 
 extern "C" fn rust_main() -> ! {
@@ -59,7 +59,10 @@ extern "C" fn rust_main() -> ! {
         peripheral::init_peripheral();
         println!("[rustsbi] RustSBI version {}", rustsbi::VERSION);
         println!("{}", rustsbi::LOGO);
-        println!("[rustsbi] Implementation: RustSBI-K210 Version {}", env!("CARGO_PKG_VERSION"));
+        println!(
+            "[rustsbi] Implementation: RustSBI-K210 Version {}",
+            env!("CARGO_PKG_VERSION")
+        );
     }
     delegate_interrupt_exception();
     if hartid == 0 {
@@ -70,9 +73,9 @@ extern "C" fn rust_main() -> ! {
 }
 
 fn pause_if_not_start_hart() {
-    use riscv::asm::wfi;
-    use riscv::register::{mie, mip, mhartid};
     use k210_hal::clint::msip;
+    use riscv::asm::wfi;
+    use riscv::register::{mhartid, mie, mip};
 
     let hartid = mhartid::read();
     if hartid != 0 {
@@ -108,20 +111,20 @@ fn init_bss() {
     unsafe {
         r0::zero_bss(&mut sbss, &mut ebss);
         r0::init_data(&mut sdata, &mut edata, &sidata);
-    } 
+    }
 }
 
 fn init_heap() {
     unsafe {
-        SBI_HEAP.lock().init(
-            HEAP_SPACE.as_ptr() as usize, SBI_HEAP_SIZE
-        )
+        SBI_HEAP
+            .lock()
+            .init(HEAP_SPACE.as_ptr() as usize, SBI_HEAP_SIZE)
     }
 }
 
 // 委托终端；把S的中断全部委托给S层
 fn delegate_interrupt_exception() {
-    use riscv::register::{mideleg, medeleg, mie};
+    use riscv::register::{medeleg, mideleg, mie};
     unsafe {
         //mideleg::set_sext();
         mideleg::set_stimer();
@@ -141,14 +144,14 @@ fn delegate_interrupt_exception() {
         // medeleg::set_instruction_fault();
         // medeleg::set_load_fault();
         // medeleg::set_store_fault();
-        // 默认不打开mie::set_mext 
+        // 默认不打开mie::set_mext
         // 不打开mie::set_mtimer
         mie::set_msoft();
     }
 }
 
 #[naked]
-#[link_section = ".text.entry"] 
+#[link_section = ".text.entry"]
 #[export_name = "_start"]
 unsafe extern "C" fn entry() -> ! {
     asm!(
@@ -166,7 +169,7 @@ unsafe extern "C" fn entry() -> ! {
     // 2. jump to rust_main (absolute address)
     "j      {rust_main}", 
     per_hart_stack_size = const PER_HART_STACK_SIZE,
-    stack = sym SBI_STACK, 
+    stack = sym SBI_STACK,
     rust_main = sym rust_main,
     options(noreturn))
 }

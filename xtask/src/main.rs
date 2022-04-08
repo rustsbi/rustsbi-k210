@@ -2,7 +2,12 @@ mod detect;
 mod test;
 
 use clap::{clap_app, crate_authors, crate_description, crate_version};
-use std::{env, fs, io::{Seek, SeekFrom, Write}, path::{Path, PathBuf}, process::{self, Command}};
+use std::{
+    env, fs,
+    io::{Seek, SeekFrom, Write},
+    path::{Path, PathBuf},
+    process::{self, Command},
+};
 
 #[derive(Debug)]
 struct XtaskEnv {
@@ -12,7 +17,7 @@ struct XtaskEnv {
 #[derive(Debug)]
 enum CompileMode {
     Debug,
-    Release
+    Release,
 }
 
 const DEFAULT_TARGET: &'static str = "riscv64imac-unknown-none-elf";
@@ -39,7 +44,8 @@ fn main() {
         (@subcommand size =>
             (about: "View size for project")
         )
-    ).get_matches();
+    )
+    .get_matches();
     let mut xtask_env = XtaskEnv {
         compile_mode: CompileMode::Debug,
     };
@@ -49,8 +55,8 @@ fn main() {
             Ok(string) => {
                 println!("xtask: using previously selected serial port {}.", string);
                 string
-            },
-            Err(_e) => detect_save_port_or_exit()
+            }
+            Err(_e) => detect_save_port_or_exit(),
         };
         if matches.is_present("release") {
             xtask_env.compile_mode = CompileMode::Release;
@@ -75,7 +81,7 @@ fn main() {
         if let Some((port_name, info)) = ans {
             detect::dump_port(&port_name, &info);
             detect::save_to_file(&port_name);
-        } else { 
+        } else {
             println!("xtask: no CH340 serial port found.");
         }
     } else {
@@ -104,7 +110,8 @@ fn xtask_run_k210(xtask_env: &XtaskEnv, port: &str) {
         .args(&["--baudrate", "1500000"]) // todo: configurate baudrate
         .arg("--terminal")
         .arg(dist_dir(xtask_env).join("k210-fused.bin"))
-        .status().unwrap();
+        .status()
+        .unwrap();
     if !status.success() {
         panic!("run k210 failed")
     }
@@ -116,13 +123,14 @@ fn xtask_build_sbi(xtask_env: &XtaskEnv) {
     command.current_dir(project_root().join("rustsbi-k210"));
     command.arg("build");
     match xtask_env.compile_mode {
-        CompileMode::Debug => {},
-        CompileMode::Release => { command.arg("--release"); },
+        CompileMode::Debug => {}
+        CompileMode::Release => {
+            command.arg("--release");
+        }
     }
     command.args(&["--package", "rustsbi-k210"]);
     command.args(&["--target", DEFAULT_TARGET]);
-    let status = command
-        .status().unwrap();
+    let status = command.status().unwrap();
     if !status.success() {
         println!("cargo build failed");
         process::exit(1);
@@ -137,7 +145,8 @@ fn xtask_binary_sbi(xtask_env: &XtaskEnv) {
         .arg("--binary-architecture=riscv64")
         .arg("--strip-all")
         .args(&["-O", "binary", "rustsbi-k210.bin"])
-        .status().unwrap();
+        .status()
+        .unwrap();
 
     if !status.success() {
         println!("objcopy binary failed");
@@ -151,13 +160,14 @@ fn xtask_build_test_kernel(xtask_env: &XtaskEnv) {
     command.current_dir(project_root().join("test-kernel"));
     command.arg("build");
     match xtask_env.compile_mode {
-        CompileMode::Debug => {},
-        CompileMode::Release => { command.arg("--release"); },
+        CompileMode::Debug => {}
+        CompileMode::Release => {
+            command.arg("--release");
+        }
     }
     command.args(&["--package", "test-kernel"]);
     command.args(&["--target", DEFAULT_TARGET]);
-    let status = command
-        .status().unwrap();
+    let status = command.status().unwrap();
     if !status.success() {
         println!("cargo build failed");
         process::exit(1);
@@ -172,7 +182,8 @@ fn xtask_binary_test_kernel(xtask_env: &XtaskEnv) {
         .arg("--binary-architecture=riscv64")
         .arg("--strip-all")
         .args(&["-O", "binary", "test-kernel.bin"])
-        .status().unwrap();
+        .status()
+        .unwrap();
 
     if !status.success() {
         println!("objcopy binary failed");
@@ -186,10 +197,15 @@ fn xtask_fuse_binary(xtask_env: &XtaskEnv) {
     let output_path = dist_dir(xtask_env).join("k210-fused.bin");
     let offset = 0x20000;
     fs::copy(sbi_binary_path, &output_path).expect("copy sbi base");
-    let mut output = fs::OpenOptions::new().read(true).write(true).open(output_path)
+    let mut output = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(output_path)
         .expect("open output file");
     let buf = fs::read(test_kernel_binary_path).expect("read kernel binary");
-    output.seek(SeekFrom::Start(offset)).expect("seek to offset");
+    output
+        .seek(SeekFrom::Start(offset))
+        .expect("seek to offset");
     output.write(&buf).expect("write output");
 }
 

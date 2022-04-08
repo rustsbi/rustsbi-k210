@@ -1,5 +1,8 @@
 use alloc::vec::Vec;
-use riscv::register::{misa::{self, MXL}, medeleg, mideleg};
+use riscv::register::{
+    medeleg, mideleg,
+    misa::{self, MXL},
+};
 use rustsbi::{print, println};
 
 pub fn print_hart_csrs() {
@@ -49,7 +52,11 @@ fn print_mideleg() {
     if mideleg.sext() {
         delegs.push("sext")
     }
-    println!("[rustsbi] mideleg: {} ({:#x})", delegs.join(", "), mideleg.bits());
+    println!(
+        "[rustsbi] mideleg: {} ({:#x})",
+        delegs.join(", "),
+        mideleg.bits()
+    );
 }
 
 #[inline]
@@ -98,5 +105,9 @@ fn print_medeleg() {
     if medeleg.store_page_fault() {
         delegs.push("spage")
     }
-    println!("[rustsbi] medeleg: {} ({:#x})", delegs.join(", "), medeleg.bits());
+    println!(
+        "[rustsbi] medeleg: {} ({:#x})",
+        delegs.join(", "),
+        medeleg.bits()
+    );
 }

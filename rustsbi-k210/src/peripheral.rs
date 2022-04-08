@@ -1,6 +1,6 @@
-use rustsbi::println;
-use k210_hal::{clock::Clocks, fpioa, pac, prelude::*, clint::msip};
+use k210_hal::{clint::msip, clock::Clocks, fpioa, pac, prelude::*};
 use riscv::register::{mhartid, mip};
+use rustsbi::println;
 
 pub fn init_peripheral() {
     let p = pac::Peripherals::take().unwrap();

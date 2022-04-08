@@ -1,12 +1,12 @@
 use core::{
     arch::asm,
-    pin::Pin,
     ops::{Generator, GeneratorState},
+    pin::Pin,
 };
-use riscv::register::scause::{Trap, Exception};
+use riscv::register::scause::{Exception, Trap};
 
-use crate::runtime::{MachineTrap, Runtime, SupervisorContext};
 use crate::feature;
+use crate::runtime::{MachineTrap, Runtime, SupervisorContext};
 
 pub fn execute_supervisor(supervisor_mepc: usize, a0: usize, a1: usize) -> ! {
     let mut rt = Runtime::new_sbi_supervisor(supervisor_mepc, a0, a1);
@@ -23,7 +23,7 @@ pub fn execute_supervisor(supervisor_mepc: usize, a0: usize, a1: usize) -> ! {
                 ctx.a0 = ans.error;
                 ctx.a1 = ans.value;
                 ctx.mepc = ctx.mepc.wrapping_add(4);
-            },
+            }
             GeneratorState::Yielded(MachineTrap::IllegalInstruction()) => {
                 let ctx = rt.context_mut();
                 // FIXME: get_vaddr_u32这个过程可能出错。
@@ -31,36 +31,42 @@ pub fn execute_supervisor(supervisor_mepc: usize, a0: usize, a1: usize) -> ! {
                 if !emulate_illegal_instruction(ctx, ins) {
                     unsafe {
                         if feature::should_transfer_trap(ctx) {
-                            feature::do_transfer_trap(ctx, Trap::Exception(Exception::IllegalInstruction))
+                            feature::do_transfer_trap(
+                                ctx,
+                                Trap::Exception(Exception::IllegalInstruction),
+                            )
                         } else {
                             fail_illegal_instruction(ctx, ins)
                         }
                     }
                 }
-            },
+            }
             GeneratorState::Yielded(MachineTrap::ExternalInterrupt()) => unsafe {
                 let ctx = rt.context_mut();
                 feature::call_supervisor_interrupt(ctx)
             },
             GeneratorState::Yielded(MachineTrap::MachineTimer()) => {
                 feature::forward_supervisor_timer()
-            },
+            }
             GeneratorState::Yielded(MachineTrap::MachineSoft()) => {
                 feature::forward_supervisor_soft()
-            },
+            }
             // todo：编写样例，验证store page fault和instruction page fault
             GeneratorState::Yielded(MachineTrap::InstructionFault(addr)) => {
                 let ctx = rt.context_mut();
                 if feature::is_page_fault(addr) {
                     unsafe {
-                        feature::do_transfer_trap(ctx, Trap::Exception(Exception::InstructionPageFault))
+                        feature::do_transfer_trap(
+                            ctx,
+                            Trap::Exception(Exception::InstructionPageFault),
+                        )
                     }
                 } else {
                     unsafe {
                         feature::do_transfer_trap(ctx, Trap::Exception(Exception::InstructionFault))
                     }
                 }
-            },
+            }
             GeneratorState::Yielded(MachineTrap::LoadFault(addr)) => {
                 let ctx = rt.context_mut();
                 if feature::is_page_fault(addr) {
@@ -68,11 +74,9 @@ pub fn execute_supervisor(supervisor_mepc: usize, a0: usize, a1: usize) -> ! {
                         feature::do_transfer_trap(ctx, Trap::Exception(Exception::LoadPageFault))
                     }
                 } else {
-                    unsafe {
-                        feature::do_transfer_trap(ctx, Trap::Exception(Exception::LoadFault))
-                    }
+                    unsafe { feature::do_transfer_trap(ctx, Trap::Exception(Exception::LoadFault)) }
                 }
-            },
+            }
             GeneratorState::Yielded(MachineTrap::StoreFault(addr)) => {
                 let ctx = rt.context_mut();
                 if feature::is_page_fault(addr) {
@@ -84,7 +88,7 @@ pub fn execute_supervisor(supervisor_mepc: usize, a0: usize, a1: usize) -> ! {
                         feature::do_transfer_trap(ctx, Trap::Exception(Exception::StoreFault))
                     }
                 }
-            },
+            }
             GeneratorState::Complete(()) => unreachable!(),
         }
     }
@@ -92,8 +96,7 @@ pub fn execute_supervisor(supervisor_mepc: usize, a0: usize, a1: usize) -> ! {
 
 #[inline]
 unsafe fn get_vaddr_u32(vaddr: usize) -> u32 {
-    get_vaddr_u16(vaddr) as u32 | 
-    ((get_vaddr_u16(vaddr.wrapping_add(2)) as u32) << 16)
+    get_vaddr_u16(vaddr) as u32 | ((get_vaddr_u16(vaddr.wrapping_add(2)) as u32) << 16)
 }
 
 #[inline]
