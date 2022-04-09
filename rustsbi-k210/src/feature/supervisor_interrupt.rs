@@ -43,6 +43,7 @@ pub fn emulate_sbi_rustsbi_k210_sext(ctx: &mut SupervisorContext) -> bool {
         // return values
         ctx.a0 = 0; // SbiRet::error = SBI_SUCCESS
         ctx.a1 = 0; // SbiRet::value = 0
+        ctx.mepc = ctx.mepc.wrapping_add(4); // PC += 4
         return true;
     } else {
         return false;
