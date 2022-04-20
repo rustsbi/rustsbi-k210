@@ -121,7 +121,11 @@ fn xtask_run_k210(xtask_env: &XtaskEnv, port: &str) {
         .status()
         .unwrap();
     if !status.success() {
-        panic!("run k210 failed")
+        eprintln!(
+            "xtask: run ktool.py failed with code {}",
+            status.code().unwrap()
+        );
+        process::exit(status.code().unwrap())
     }
 }
 
