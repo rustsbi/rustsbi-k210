@@ -12,6 +12,10 @@ pub fn detect_serial_ports() -> Option<(String, UsbPortInfo)> {
     for p in ports {
         if let SerialPortType::UsbPort(info) = p.port_type {
             if info.vid == 0x1a86 && info.pid == 0x7523 {
+                // CH340
+                ans.push((p.port_name, info));
+            } else if info.vid == 0x0403 && info.pid == 0x6010 {
+                // FT2232
                 ans.push((p.port_name, info));
             }
         }
@@ -21,23 +25,34 @@ pub fn detect_serial_ports() -> Option<(String, UsbPortInfo)> {
     } else if ans.len() == 1 {
         return Some(ans[0].clone());
     } else {
+        let mut name_list = String::new();
+        for (i, (e, _)) in ans.iter().enumerate() {
+            name_list += e;
+            if i != ans.len() - 1 {
+                name_list += ", ";
+            }
+        } // fixme: rewrite using Join trait
         let mut input = String::new();
-        print!("Multiple ports detected.");
+        println!("xtask: multiple serial ports detected.");
         for (port_name, info) in ans.iter() {
             dump_port(port_name, info);
         }
+        let stdin = io::stdin();
+        let mut stdout = io::stdout();
         let (port_name, info) = 'outer: loop {
-            println!("Please select one port: ");
-            io::stdin().read_line(&mut input).expect("read line");
+            print!("xtask: please select one port [{}]: ", name_list);
+            stdout.flush().unwrap();
+            stdin.read_line(&mut input).expect("read line");
             for (port_name, info) in ans.iter() {
-                if input.eq_ignore_ascii_case(port_name) {
+                if input.trim().eq_ignore_ascii_case(port_name) {
                     break 'outer (port_name, info);
                 }
             }
-            println!(
+            eprintln!(
                 "Input '{}' does not match to any ports! Please input again.",
-                input
+                input.trim()
             );
+            input.clear();
         };
         return Some((port_name.clone(), info.clone()));
     }

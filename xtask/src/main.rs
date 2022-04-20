@@ -58,11 +58,19 @@ fn main() {
             }
             Err(_e) => detect_save_port_or_exit(),
         };
+        let ktool_exists = fs::metadata(project_root().join("xtask").join("ktool.py")).is_ok();
+        if !ktool_exists {
+            eprintln!(
+                "xtask: ktool.py file not found
+    To install ktool.py, download from https://github.com/loboris/ktool,
+    then copy ktool.py file into path xtask/ktool.py."
+            );
+            process::exit(1);
+        }
         if matches.is_present("release") {
             xtask_env.compile_mode = CompileMode::Release;
         }
         println!("xtask: mode: {:?}", xtask_env.compile_mode);
-        // println!("Run k210 on {}", port);
         xtask_build_sbi(&xtask_env);
         xtask_binary_sbi(&xtask_env);
         xtask_build_test_kernel(&xtask_env);
