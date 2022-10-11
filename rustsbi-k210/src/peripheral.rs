@@ -44,7 +44,7 @@ impl rustsbi::Timer for Timer {
         // This function must clear the pending timer interrupt bit as well.
         use k210_hal::clint::mtimecmp;
         mtimecmp::write(mhartid::read(), stime_value);
-        unsafe { mip::clear_mtimer() };
+        unsafe { mip::clear_stimer() };
     }
 }
 
