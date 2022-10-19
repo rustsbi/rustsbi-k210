@@ -3,7 +3,7 @@
 #![feature(naked_functions)]
 #![feature(generator_trait)]
 #![feature(default_alloc_error_handler)]
-#![feature(asm_sym, asm_const)]
+#![feature(asm_const)]
 
 mod execute;
 mod feature;

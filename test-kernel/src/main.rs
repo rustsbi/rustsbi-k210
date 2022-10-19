@@ -1,5 +1,5 @@
 #![feature(naked_functions)]
-#![feature(asm_sym, asm_const)]
+#![feature(asm_const)]
 #![feature(generator_trait)]
 #![feature(default_alloc_error_handler)]
 #![feature(stdsimd)]
