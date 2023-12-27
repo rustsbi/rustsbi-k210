@@ -1,8 +1,4 @@
-use core::{
-    arch::asm,
-    ops::{Generator, GeneratorState},
-    pin::Pin,
-};
+use core::arch::asm;
 use riscv::register::{
     mcause::{self, Exception, Interrupt, Trap},
     mstatus::{self, Mstatus, MPP},
@@ -49,10 +45,10 @@ impl Runtime {
     }
 }
 
-impl Generator for Runtime {
-    type Yield = MachineTrap;
-    type Return = ();
-    fn resume(mut self: Pin<&mut Self>, _arg: ()) -> GeneratorState<Self::Yield, Self::Return> {
+impl Iterator for Runtime {
+    type Item = MachineTrap;
+
+    fn next(&mut self) -> Option<Self::Item> {
         unsafe { do_resume(&mut self.context as *mut _) };
         let mtval = mtval::read();
         let trap = match mcause::read().cause() {
@@ -69,7 +65,7 @@ impl Generator for Runtime {
                 e, mtval, self.context
             ),
         };
-        GeneratorState::Yielded(trap)
+        Some(trap)
     }
 }
 

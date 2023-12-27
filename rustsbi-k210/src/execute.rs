@@ -1,8 +1,4 @@
-use core::{
-    arch::asm,
-    ops::{Generator, GeneratorState},
-    pin::Pin,
-};
+use core::arch::asm;
 use riscv::register::scause::{Exception, Trap};
 
 use crate::feature;
@@ -11,8 +7,8 @@ use crate::runtime::{MachineTrap, Runtime, SupervisorContext};
 pub fn execute_supervisor(supervisor_mepc: usize, a0: usize, a1: usize) -> ! {
     let mut rt = Runtime::new_sbi_supervisor(supervisor_mepc, a0, a1);
     loop {
-        match Pin::new(&mut rt).resume(()) {
-            GeneratorState::Yielded(MachineTrap::SbiCall()) => {
+        match rt.next() {
+            Some(MachineTrap::SbiCall()) => {
                 let ctx = rt.context_mut();
                 if emulate_sbi_call(ctx) {
                     continue;
@@ -24,7 +20,7 @@ pub fn execute_supervisor(supervisor_mepc: usize, a0: usize, a1: usize) -> ! {
                 ctx.a1 = ans.value;
                 ctx.mepc = ctx.mepc.wrapping_add(4);
             }
-            GeneratorState::Yielded(MachineTrap::IllegalInstruction()) => {
+            Some(MachineTrap::IllegalInstruction()) => {
                 let ctx = rt.context_mut();
                 // FIXME: get_vaddr_u32这个过程可能出错。
                 let ins = unsafe { get_vaddr_u32(ctx.mepc) } as usize;
@@ -41,18 +37,14 @@ pub fn execute_supervisor(supervisor_mepc: usize, a0: usize, a1: usize) -> ! {
                     }
                 }
             }
-            GeneratorState::Yielded(MachineTrap::ExternalInterrupt()) => unsafe {
+            Some(MachineTrap::ExternalInterrupt()) => unsafe {
                 let ctx = rt.context_mut();
                 feature::call_supervisor_interrupt(ctx)
             },
-            GeneratorState::Yielded(MachineTrap::MachineTimer()) => {
-                feature::forward_supervisor_timer()
-            }
-            GeneratorState::Yielded(MachineTrap::MachineSoft()) => {
-                feature::forward_supervisor_soft()
-            }
+            Some(MachineTrap::MachineTimer()) => feature::forward_supervisor_timer(),
+            Some(MachineTrap::MachineSoft()) => feature::forward_supervisor_soft(),
             // todo：编写样例，验证store page fault和instruction page fault
-            GeneratorState::Yielded(MachineTrap::InstructionFault(addr)) => {
+            Some(MachineTrap::InstructionFault(addr)) => {
                 let ctx = rt.context_mut();
                 if feature::is_page_fault(addr) {
                     unsafe {
@@ -67,7 +59,7 @@ pub fn execute_supervisor(supervisor_mepc: usize, a0: usize, a1: usize) -> ! {
                     }
                 }
             }
-            GeneratorState::Yielded(MachineTrap::LoadFault(addr)) => {
+            Some(MachineTrap::LoadFault(addr)) => {
                 let ctx = rt.context_mut();
                 if feature::is_page_fault(addr) {
                     unsafe {
@@ -77,7 +69,7 @@ pub fn execute_supervisor(supervisor_mepc: usize, a0: usize, a1: usize) -> ! {
                     unsafe { feature::do_transfer_trap(ctx, Trap::Exception(Exception::LoadFault)) }
                 }
             }
-            GeneratorState::Yielded(MachineTrap::StoreFault(addr)) => {
+            Some(MachineTrap::StoreFault(addr)) => {
                 let ctx = rt.context_mut();
                 if feature::is_page_fault(addr) {
                     unsafe {
@@ -89,7 +81,7 @@ pub fn execute_supervisor(supervisor_mepc: usize, a0: usize, a1: usize) -> ! {
                     }
                 }
             }
-            GeneratorState::Complete(()) => unreachable!(),
+            None => unreachable!(),
         }
     }
 }

@@ -13,3 +13,8 @@ buddy_system_allocator = "0.8"
 spin = "0.9"
 bitflags = "1.2"
 bit_field = "0.10"
+
+[[bin]]
+name = "test-kernel"
+test = false
+bench = false

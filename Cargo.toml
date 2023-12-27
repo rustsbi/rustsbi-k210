@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 members = [
     "rustsbi-k210",
     "test-kernel",
